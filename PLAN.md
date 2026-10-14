@@ -25,18 +25,20 @@
 
 ## Текущее состояние кодовой базы
 - [x] Spring Boot 4.1.1 / Java 23, Maven wrapper (`mvnw`), стартовый `DbmsHomework1Application`.
-- [x] `pom.xml` (web + lombok + test). Нужно добавить `spring-boot-starter-data-redis`.
+- [x] `pom.xml`: web + lombok + test + **`spring-boot-starter-data-redis`** (Lettuce 7.5.2, без Jedis).
 - [x] `src/main/resources/application.yaml` — пока пустой (только имя приложения).
-- [x] `.gitignore` есть; git-репозиторий ещё не инициализирован.
+- [x] `.gitignore` есть; git-репозиторий инициализирован.
+- [x] Структура пакетов `config/controller/service/model/dto` и `docker/redis/{master,replica,sentinel}` создана.
 - [ ] Всё остальное (инфраструктура, Redis-код, README) — отсутствует.
 
 ---
 
 ## Фаза 0. Подготовка
-- [ ] Добавить в `pom.xml` зависимость `spring-boot-starter-data-redis` (внутри — Lettuce).
-- [ ] `git init` в корне проекта.
-- [ ] Создать структуру пакетов: `config`, `controller`, `service`, `model`, `dto`.
-- [ ] Создать каталоги `docker/redis/{master,replica,sentinel}`.
+- [x] Добавить в `pom.xml` зависимость `spring-boot-starter-data-redis` (Lettuce 7.5.2).
+- [x] `git init` в корне проекта.
+- [x] Создать структуру пакетов: `config`, `controller`, `service`, `model`, `dto`.
+- [x] Создать каталоги `docker/redis/{master,replica,sentinel}`.
+- [x] Проверка: `./mvnw -DskipTests compile` → BUILD SUCCESS.
 
 ## Фаза 1. Инфраструктура Docker Compose (критерии 1, 2, 7)
 - [ ] `docker/redis/master/redis.conf`:
