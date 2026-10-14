@@ -41,29 +41,32 @@
 - [x] Проверка: `./mvnw -DskipTests compile` → BUILD SUCCESS.
 
 ## Фаза 1. Инфраструктура Docker Compose (критерии 1, 2, 7)
-- [ ] `docker/redis/master/redis.conf`:
-  - [ ] `appendonly yes`, `appendfsync everysec`, `auto-aof-rewrite-percentage 100`
-  - [ ] RDB: `save 900 1`, `save 300 10`, `save 60 10000`
-  - [ ] `maxmemory 256mb`, `maxmemory-policy volatile-lru`
-  - [ ] `min-replicas-to-write 1`, `min-replicas-max-lag 10`  ← split-brain
-- [ ] `docker/redis/replica/redis.conf`:
-  - [ ] `replicaof redis-master 6379`, `replica-read-only yes`
-  - [ ] те же persistence/maxmemory/`min-replicas-*` (для нового мастера после promote)
-- [ ] `docker/redis/sentinel/sentinel.conf`:
-  - [ ] `sentinel monitor mymaster redis-master 6379 2`
-  - [ ] `down-after-milliseconds 5000`, `failover-timeout 10000`, `parallel-syncs 1`
-  - [ ] `resolve-hostnames yes`, `announce-hostnames yes`
-  - [ ] `sentinel resolve-hostnames yes`, `sentinel announce-hostnames yes`
-- [ ] `docker-compose.yml`:
-  - [ ] сеть `redis-net` (bridge)
-  - [ ] `redis-master` (6379:6379)
-  - [ ] `redis-replica-1` (6380:6379), `redis-replica-2` (6381:6379)
-  - [ ] `sentinel-1/2/3` (26379/26380/26381), запуск через копию конфига в writable-путь
-  - [ ] `redisinsight` (5540:5540)
-  - [ ] `app` (8080:8080, depends_on sentinel)
-- [ ] Проверка: `docker compose up -d` + `docker compose ps` → все Up
-- [ ] Проверка: `redis-cli -p 6379 INFO replication` → `connected_slaves:2`
-- [ ] Проверка: `redis-cli -p 26379 SENTINEL get-master-addr-by-name mymaster`
+- [x] `docker/redis/master/redis.conf`:
+  - [x] `appendonly yes`, `appendfsync everysec`, `auto-aof-rewrite-percentage 100`
+  - [x] RDB: `save 900 1`, `save 300 10`, `save 60 10000`
+  - [x] `maxmemory 256mb`, `maxmemory-policy volatile-lru`
+  - [x] `min-replicas-to-write 1`, `min-replicas-max-lag 10`  ← split-brain
+- [x] `docker/redis/replica/redis.conf`:
+  - [x] `replicaof redis-master 6379`, `replica-read-only yes`
+  - [x] те же persistence/maxmemory/`min-replicas-*` (для нового мастера после promote)
+- [x] `docker/redis/sentinel/sentinel.conf`:
+  - [x] `sentinel monitor mymaster redis-master 6379 2`
+  - [x] `down-after-milliseconds 5000`, `failover-timeout 10000`, `parallel-syncs 1`
+  - [x] `sentinel resolve-hostnames yes`, `sentinel announce-hostnames yes`
+- [x] `docker-compose.yml`:
+  - [x] сеть `redis-net` (bridge)
+  - [x] `redis-master` (6379:6379)
+  - [x] `redis-replica-1` (6380:6379), `redis-replica-2` (6381:6379)
+  - [x] `sentinel-1/2/3` (26379/26380/26381), запуск через копию конфига в writable-путь
+  - [x] `redisinsight` (5540:5540)
+  - [x] healthcheck + depends_on; именованные volumes для данных
+  - [ ] `app` (8080:8080) — сервис добавим в Фазе 2 вместе с Dockerfile
+- [x] Проверка: `docker compose up -d` + `docker compose ps` → 7 контейнеров Up (6 healthy)
+- [x] Проверка: `INFO replication` → `connected_slaves:2` (`state=online`, `ip=redis-replica-N`)
+- [x] Проверка: `SENTINEL get-master-addr-by-name mymaster` → `redis-master 6379` (на всех 3 Sentinel)
+- [x] Проверка: `SENTINEL master` → `num-slaves=2`, `num-other-sentinels=2`, `quorum=2`
+- [x] Проверка: запись на мастере реплицируется; запись на реплике → `READONLY`
+- [x] Проверка: `CONFIG GET min-replicas-to-write` → `1`, `maxmemory-policy` → `volatile-lru`
 
 ## Фаза 2. Подключение приложения через Sentinel (критерий 2)
 - [ ] `application.yaml`: `spring.data.redis.sentinel.master=mymaster`, `.nodes=sentinel-1:26379,...`, таймауты, pool

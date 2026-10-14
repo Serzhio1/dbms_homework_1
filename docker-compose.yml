@@ -1,0 +1,185 @@
+services:
+  redis-master:
+    image: redis:7
+    container_name: redis-master
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./docker/redis/master/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - redis-master-data:/data
+    networks: [redis-net]
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "6379", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  redis-replica-1:
+    image: redis:7
+    container_name: redis-replica-1
+    command:
+      - redis-server
+      - /usr/local/etc/redis/redis.conf
+      - --replica-announce-ip
+      - redis-replica-1
+      - --replica-announce-port
+      - "6379"
+    ports:
+      - "6380:6379"
+    volumes:
+      - ./docker/redis/replica/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - redis-replica-1-data:/data
+    depends_on:
+      redis-master:
+        condition: service_healthy
+    networks: [redis-net]
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "6379", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  redis-replica-2:
+    image: redis:7
+    container_name: redis-replica-2
+    command:
+      - redis-server
+      - /usr/local/etc/redis/redis.conf
+      - --replica-announce-ip
+      - redis-replica-2
+      - --replica-announce-port
+      - "6379"
+    ports:
+      - "6381:6379"
+    volumes:
+      - ./docker/redis/replica/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - redis-replica-2-data:/data
+    depends_on:
+      redis-master:
+        condition: service_healthy
+    networks: [redis-net]
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "6379", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  sentinel-1:
+    image: redis:7
+    container_name: sentinel-1
+    environment:
+      SENTINEL_PORT: "26379"
+    command: >
+      sh -c "[ -f /data/sentinel.conf ] || cp /etc/redis/sentinel.conf /data/sentinel.conf;
+             sed -i 's/^port .*/port '$${SENTINEL_PORT}'/' /data/sentinel.conf;
+             exec redis-sentinel /data/sentinel.conf"
+    ports:
+      - "26379:26379"
+    volumes:
+      - ./docker/redis/sentinel/sentinel.conf:/etc/redis/sentinel.conf:ro
+      - sentinel-1-data:/data
+    depends_on:
+      redis-master:
+        condition: service_healthy
+      redis-replica-1:
+        condition: service_healthy
+      redis-replica-2:
+        condition: service_healthy
+    networks: [redis-net]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -p $${SENTINEL_PORT} ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  sentinel-2:
+    image: redis:7
+    container_name: sentinel-2
+    environment:
+      SENTINEL_PORT: "26380"
+    command: >
+      sh -c "[ -f /data/sentinel.conf ] || cp /etc/redis/sentinel.conf /data/sentinel.conf;
+             sed -i 's/^port .*/port '$${SENTINEL_PORT}'/' /data/sentinel.conf;
+             exec redis-sentinel /data/sentinel.conf"
+    ports:
+      - "26380:26380"
+    volumes:
+      - ./docker/redis/sentinel/sentinel.conf:/etc/redis/sentinel.conf:ro
+      - sentinel-2-data:/data
+    depends_on:
+      redis-master:
+        condition: service_healthy
+      redis-replica-1:
+        condition: service_healthy
+      redis-replica-2:
+        condition: service_healthy
+    networks: [redis-net]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -p $${SENTINEL_PORT} ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  sentinel-3:
+    image: redis:7
+    container_name: sentinel-3
+    environment:
+      SENTINEL_PORT: "26381"
+    command: >
+      sh -c "[ -f /data/sentinel.conf ] || cp /etc/redis/sentinel.conf /data/sentinel.conf;
+             sed -i 's/^port .*/port '$${SENTINEL_PORT}'/' /data/sentinel.conf;
+             exec redis-sentinel /data/sentinel.conf"
+    ports:
+      - "26381:26381"
+    volumes:
+      - ./docker/redis/sentinel/sentinel.conf:/etc/redis/sentinel.conf:ro
+      - sentinel-3-data:/data
+    depends_on:
+      redis-master:
+        condition: service_healthy
+      redis-replica-1:
+        condition: service_healthy
+      redis-replica-2:
+        condition: service_healthy
+    networks: [redis-net]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -p $${SENTINEL_PORT} ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: redisinsight
+    ports:
+      - "5540:5540"
+    environment:
+      RI_REDIS_HOST: redis-master
+      RI_REDIS_PORT: "6379"
+      RI_REDIS_ALIAS: "GameHub Master"
+    volumes:
+      - redisinsight-data:/data
+    depends_on:
+      redis-master:
+        condition: service_healthy
+    networks: [redis-net]
+
+networks:
+  redis-net:
+    driver: bridge
+
+volumes:
+  redis-master-data:
+  redis-replica-1-data:
+  redis-replica-2-data:
+  sentinel-1-data:
+  sentinel-2-data:
+  sentinel-3-data:
+  redisinsight-data:
