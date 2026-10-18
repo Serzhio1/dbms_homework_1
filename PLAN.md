@@ -3,6 +3,17 @@
 > Файл-навигатор. Агент перед каждой задачей сверяется с ним: **что уже есть в кодовой базе**, **что ещё нужно сделать**.
 > Отмечай `[x]` по мере выполнения. Цель — 10/10 по критериям из ТЗ.
 
+## Краткое описание задачи (ТЗ)
+Backend-платформа **«GameHub»**: REST API для управления игровыми турнирами, рейтингами игроков, достижениями и уведомлениями на Redis. Требуется:
+- **Данные Redis**: профиль игрока — Hash, счётчик входов — String + Lua (INCR + EXPIRE 86400), кеш профиля — String JSON TTL 60с (Cache-Aside), лидерборд — Sorted Set, достижения — Set, уведомления — Stream (7 дней).
+- **Эндпоинты (10 шт.)**: POST/GET/PATCH профили, POST login, POST leaderboard/score, GET top/rank, POST/GET достижения, POST batch (pipeline).
+- **Инфраструктура**: Docker Compose (мастер 6379 с RDB+AOF+volatile-lru+min-replicas*, 2 реплики 6380/6381 read-only, 3 Sentinel с кворумом 2 на 26379–26381, Redis Insight 5540). Spring Boot приложение подключается **только через Sentinel**.
+- **Функциональность**: атомарный Lua-скрипт для логинов, Cache-Aside для профилей, Stream с группой потребителя (XGROUP/XREADGROUP/XACK) и XTRIM по MINID (7 дней), пайплайн для массовой загрузки (10–20 профилей).
+- **Инфраструктурные требования**: персистентность RDB+AOF на мастере, `min-replicas-to-write 1`/`min-replicas-max-lag 10` для защиты от split-brain, общая Docker-сеть, healthchecks, таймауты/ретраи при подключении, проверка соединения при старте.
+- **Сдача**: код + docker-compose.yml + конфиги (redis.conf, sentinel.conf) + README.md с инструкцией по запуску и описанием архитектуры + видео-демо 5–10 мин (все сценарии: запуск, API, кеш, streams, failover, split-brain, pipeline).
+- **Скрипт самопроверки**: `dzl_check.py` проверяет основные требования.
+- **Оценка (10 баллов)**: инфраструктура (2), репликация/Sentinel (2), функциональность (2), кеш (1), streams (1), pipeline (1), split-brain (0.5), документация (0.5).
+
 ## Целевая архитектура (из ТЗ)
 - 1 мастер Redis (персистентность RDB + AOF, volatile-lru, защита от split-brain).
 - 2 реплики (read-only).
@@ -26,10 +37,10 @@
 ## Текущее состояние кодовой базы
 - [x] Spring Boot 4.1.1 / Java 23, Maven wrapper (`mvnw`), стартовый `DbmsHomework1Application`.
 - [x] `pom.xml`: web + lombok + test + **`spring-boot-starter-data-redis`** (Lettuce 7.5.2, без Jedis).
-- [x] `src/main/resources/application.yaml` — пока пустой (только имя приложения).
 - [x] `.gitignore` есть; git-репозиторий инициализирован.
-- [x] Структура пакетов `config/controller/service/model/dto` и `docker/redis/{master,replica,sentinel}` создана.
-- [ ] Всё остальное (инфраструктура, Redis-код, README) — отсутствует.
+- [x] Структура пакетов `config/controller/service/model/dto` создана.
+- [x] Фаза 0 (подготовка) + Фаза 1 (инфраструктура Docker: master/replica/sentinel/insight) + Фаза 2 (подключение приложения через Sentinel, Lua-скрипт, Stream-группа, пинг) — выполнены и протестированы (включая failover через `SENTINEL failover`, автопереподключение через Lettuce watchdog, транзиентные `NOREPLICAS` ошибки при переключении).
+- [ ] Фазы 3–10 (REST-контроллеры, сервисы, README, тесты, видео) — ещё не сделаны.
 
 ---
 
@@ -60,7 +71,7 @@
   - [x] `sentinel-1/2/3` (26379/26380/26381), запуск через копию конфига в writable-путь
   - [x] `redisinsight` (5540:5540)
   - [x] healthcheck + depends_on; именованные volumes для данных
-  - [ ] `app` (8080:8080) — сервис добавим в Фазе 2 вместе с Dockerfile
+  - [x] `app` (8080:8080) — сервис добавлен (в Фазе 2 вместе с Dockerfile)
 - [x] Проверка: `docker compose up -d` + `docker compose ps` → 7 контейнеров Up (6 healthy)
 - [x] Проверка: `INFO replication` → `connected_slaves:2` (`state=online`, `ip=redis-replica-N`)
 - [x] Проверка: `SENTINEL get-master-addr-by-name mymaster` → `redis-master 6379` (на всех 3 Sentinel)
@@ -69,13 +80,13 @@
 - [x] Проверка: `CONFIG GET min-replicas-to-write` → `1`, `maxmemory-policy` → `volatile-lru`
 
 ## Фаза 2. Подключение приложения через Sentinel (критерий 2)
-- [ ] `application.yaml`: `spring.data.redis.sentinel.master=mymaster`, `.nodes=sentinel-1:26379,...`, таймауты, pool
-- [ ] `config/RedisConfig.java`:
-  - [ ] бин `DefaultRedisScript<Long>` для Lua (загрузка `scripts/increment_logins.lua`)
-  - [ ] стартовая проверка соединения (`PING`)
-  - [ ] идемпотентное создание группы `XGROUP CREATE notifications notifications-group $ MKSTREAM`
-  - [ ] запуск консьюмера и планировщика тримминга
-- [ ] Подтверждение: после failover приложение продолжает работать
+- [x] `application.yaml`: `spring.data.redis.sentinel.master=mymaster`, `.nodes=sentinel-1:26379,...`, таймауты, pool
+- [x] `config/RedisConfig.java`:
+  - [x] бин `DefaultRedisScript<Long>` для Lua (загрузка `scripts/increment_logins.lua`)
+  - [x] стартовая проверка соединения (`PING`)
+  - [x] идемпотентное создание группы `XGROUP CREATE notifications notifications-group $ MKSTREAM`
+  - [x] запуск консьюмера и планировщика тримминга
+- [x] Подтверждение: после failover приложение продолжает работать (Lettuce watchdog переподключился к новому мастеру)
 
 ## Фаза 3. Профили игроков (Hash + Cache-Aside) (критерии 3, 4)
 - [ ] `model/PlayerProfile.java`, `dto/PlayerRequest.java`

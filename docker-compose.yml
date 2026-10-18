@@ -171,6 +171,23 @@ services:
         condition: service_healthy
     networks: [redis-net]
 
+
+  app:
+    build: .
+    container_name: gamehub-app
+    ports:
+      - "8080:8080"
+    depends_on:
+      sentinel-1:
+        condition: service_healthy
+      sentinel-2:
+        condition: service_healthy
+      sentinel-3:
+        condition: service_healthy
+    networks: [redis-net]
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+
 networks:
   redis-net:
     driver: bridge
