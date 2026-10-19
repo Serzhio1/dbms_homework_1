@@ -40,8 +40,8 @@ Backend-платформа **«GameHub»**: REST API для управления
 - [x] `.gitignore` есть; git-репозиторий инициализирован.
 - [x] Структура пакетов `config/controller/service/model/dto` создана.
 - [x] Фаза 0 (подготовка) + Фаза 1 (инфраструктура Docker: master/replica/sentinel/insight) + Фаза 2 (подключение приложения через Sentinel, Lua-скрипт, Stream-группа, пинг) — выполнены и протестированы (включая failover через `SENTINEL failover`, автопереподключение через Lettuce watchdog, транзиентные `NOREPLICAS` ошибки при переключении).
-- [x] Фаза 3 (профиль игрока Hash + Cache-Aside), Фаза 4 (счётчик входов Lua), Фаза 5 (лидерборд Sorted Set) — выполнены и протестированы end-to-end.
-- [ ] Фазы 6–10 (достижения, streams-продюсер, pipeline, README, тесты, видео) — ещё не сделаны.
+- [x] Фаза 3 (профиль игрока Hash + Cache-Aside), Фаза 4 (счётчик входов Lua), Фаза 5 (лидерборд Sorted Set), Фаза 6 (достижения Set) — выполнены и протестированы end-to-end.
+- [ ] Фазы 7–10 (streams-продюсер, pipeline, README, тесты, видео) — ещё не сделаны.
 - Примечание: Spring Boot 4.1 использует Jackson 3 (`tools.jackson.*`), а не Jackson 2; добавлены `spring-boot-starter-validation` и `spring-boot-starter-jackson`.
 
 ---
@@ -110,11 +110,11 @@ Backend-платформа **«GameHub»**: REST API для управления
 - [x] Проверка: топ-10 по убыванию, место игрока (0-based), отсутствующий → 404, несуществующий игрок при начислении → 404
 
 ## Фаза 6. Достижения (Set) (критерий 3)
-- [ ] `AchievementService`: `SADD`, `SISMEMBER`, `SINTER`
-- [ ] `POST /api/players/{id}/achievements`
-- [ ] `GET /api/players/{id}/achievements/{name}`
-- [ ] `GET /api/players/{id1}/achievements/common/{id2}`
-- [ ] Проверка: пересечение достижений
+- [x] `AchievementService`: `SADD`, `SISMEMBER`, `SINTER`
+- [x] `POST /api/players/{id}/achievements` (требует существования игрока → 404; 201 + `added`)
+- [x] `GET /api/players/{id}/achievements/{name}` (`SISMEMBER` → `{has}`)
+- [x] `GET /api/players/{id1}/achievements/common/{id2}` (`SINTER` → `{playerId1, playerId2, common:[]}`)
+- [x] Проверка: пересечение достижений (общие, пустое пересечение), дубликат `SADD` → `added=false`
 
 ## Фаза 7. Очередь уведомлений (Streams) (критерий 5)
 - [ ] `NotificationService`:
