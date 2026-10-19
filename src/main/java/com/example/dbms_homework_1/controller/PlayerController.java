@@ -1,5 +1,6 @@
 package com.example.dbms_homework_1.controller;
 
+import com.example.dbms_homework_1.dto.LoginResponse;
 import com.example.dbms_homework_1.dto.PlayerRequest;
 import com.example.dbms_homework_1.model.PlayerProfile;
 import com.example.dbms_homework_1.service.PlayerService;
@@ -37,5 +38,15 @@ public class PlayerController {
         return playerService.getPlayer(id)
                 .map(ResponseEntity::ok)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Player " + id + " not found"));
+    }
+
+    @PostMapping("/{id}/login")
+    public ResponseEntity<LoginResponse> login(@PathVariable String id) {
+        try {
+            long logins = playerService.login(id);
+            return ResponseEntity.ok(new LoginResponse(id, logins));
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+        }
     }
 }

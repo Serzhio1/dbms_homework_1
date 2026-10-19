@@ -5,12 +5,14 @@ import com.example.dbms_homework_1.model.PlayerProfile;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -22,9 +24,11 @@ public class PlayerService {
     private static final long CACHE_TTL_SECONDS = 60;
     private static final String PROFILE_KEY = "player:";
     private static final String CACHE_KEY = "cache:player:";
+    private static final String LOGINS_KEY = "logins:";
 
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
+    private final DefaultRedisScript<Long> incrementLoginsScript;
 
     public PlayerProfile createPlayer(String id, PlayerRequest request) {
         if (Boolean.TRUE.equals(redisTemplate.hasKey(PROFILE_KEY + id))) {
@@ -51,6 +55,18 @@ public class PlayerService {
 
         log.info("Created player {}: HSET {} + DEL {}", id, PROFILE_KEY + id, CACHE_KEY + id);
         return profile;
+    }
+
+    public long login(String id) {
+        if (!Boolean.TRUE.equals(redisTemplate.hasKey(PROFILE_KEY + id))) {
+            throw new IllegalArgumentException("Player " + id + " does not exist");
+        }
+
+        Long count = redisTemplate.execute(incrementLoginsScript, List.of(), id);
+        long logins = count == null ? 0L : count;
+
+        log.info("Player {} logged in -> {} = {} (EVALSHA, atomic INCR + EXPIRE 86400)", id, LOGINS_KEY + id, logins);
+        return logins;
     }
 
     public Optional<PlayerProfile> getPlayer(String id) {
