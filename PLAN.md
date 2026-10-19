@@ -40,7 +40,9 @@ Backend-платформа **«GameHub»**: REST API для управления
 - [x] `.gitignore` есть; git-репозиторий инициализирован.
 - [x] Структура пакетов `config/controller/service/model/dto` создана.
 - [x] Фаза 0 (подготовка) + Фаза 1 (инфраструктура Docker: master/replica/sentinel/insight) + Фаза 2 (подключение приложения через Sentinel, Lua-скрипт, Stream-группа, пинг) — выполнены и протестированы (включая failover через `SENTINEL failover`, автопереподключение через Lettuce watchdog, транзиентные `NOREPLICAS` ошибки при переключении).
-- [ ] Фазы 3–10 (REST-контроллеры, сервисы, README, тесты, видео) — ещё не сделаны.
+- [x] Фаза 3 (профиль игрока Hash + Cache-Aside), Фаза 4 (счётчик входов Lua), Фаза 5 (лидерборд Sorted Set) — выполнены и протестированы end-to-end.
+- [ ] Фазы 6–10 (достижения, streams-продюсер, pipeline, README, тесты, видео) — ещё не сделаны.
+- Примечание: Spring Boot 4.1 использует Jackson 3 (`tools.jackson.*`), а не Jackson 2; добавлены `spring-boot-starter-validation` и `spring-boot-starter-jackson`.
 
 ---
 
@@ -89,23 +91,23 @@ Backend-платформа **«GameHub»**: REST API для управления
 - [x] Подтверждение: после failover приложение продолжает работать (Lettuce watchdog переподключился к новому мастеру)
 
 ## Фаза 3. Профили игроков (Hash + Cache-Aside) (критерии 3, 4)
-- [ ] `model/PlayerProfile.java`, `dto/PlayerRequest.java`
-- [ ] `PlayerService`:
-  - [ ] `POST`: `HSET player:{id} name level region created_at` + `DEL cache:player:{id}`
-  - [ ] `GET`: `GET cache:player:{id}` → hit вернуть JSON; miss: `HGETALL` + `SET cache:player:{id} {json} EX 60`
-- [ ] `PlayerController`: `POST /api/players/{id}`, `GET /api/players/{id}`
-- [ ] Проверка: `TTL cache:player:{id}` > 0, второй GET — hit
+- [x] `model/PlayerProfile.java`, `dto/PlayerRequest.java` (Bean Validation: `@NotBlank`, `@Min`)
+- [x] `PlayerService`:
+  - [x] `POST`: `HSET player:{id} name level region created_at` + `DEL cache:player:{id}` (+ проверка дубликата → 409)
+  - [x] `GET`: `GET cache:player:{id}` → hit вернуть JSON; miss: `HGETALL` + `SET cache:player:{id} {json} EX 60` (+ самовосстановление при повреждённом кэше)
+- [x] `PlayerController`: `POST /api/players/{id}`, `GET /api/players/{id}`
+- [x] Проверка: `TTL cache:player:{id}` > 0 (60), второй GET — hit, отсутствующий игрок → 404
 
 ## Фаза 4. Счётчик входов (String + INCR + Lua) (критерий 3)
-- [ ] `src/main/resources/scripts/increment_logins.lua`: `INCR` + `EXPIRE 86400`, вернуть значение
-- [ ] `PlayerService.login(id)` — выполнить скрипт
-- [ ] `POST /api/players/{id}/login`
-- [ ] Проверка: `GET logins:{id}` растёт, TTL ≈ 86400
+- [x] `src/main/resources/scripts/increment_logins.lua`: `INCR` + `EXPIRE 86400`, вернуть значение
+- [x] `PlayerService.login(id)` — выполнить скрипт (требует существования игрока → 404)
+- [x] `POST /api/players/{id}/login` (ответ `{playerId, logins}`)
+- [x] Проверка: `GET logins:{id}` растёт (1,2,3,…), `TTL` ≈ 86400 и обновляется при каждом входе
 
 ## Фаза 5. Лидерборд (Sorted Set) (критерий 3)
-- [ ] `LeaderboardService`: `ZINCRBY tournament:main`, `ZREVRANGE 0 9 WITHSCORES`, `ZRANK`
-- [ ] `POST /api/leaderboard/score`, `GET /api/leaderboard/top?limit=10`, `GET /api/leaderboard/rank/{playerId}`
-- [ ] Проверка: топ-10 и место игрока
+- [x] `LeaderboardService`: `ZINCRBY tournament:main`, `ZREVRANGE 0 9 WITHSCORES`, `ZREVRANK`
+- [x] `POST /api/leaderboard/score`, `GET /api/leaderboard/top?limit=10`, `GET /api/leaderboard/rank/{playerId}`
+- [x] Проверка: топ-10 по убыванию, место игрока (0-based), отсутствующий → 404, несуществующий игрок при начислении → 404
 
 ## Фаза 6. Достижения (Set) (критерий 3)
 - [ ] `AchievementService`: `SADD`, `SISMEMBER`, `SINTER`
