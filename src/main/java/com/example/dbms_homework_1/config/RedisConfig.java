@@ -67,7 +67,7 @@ public class RedisConfig {
         try {
             new StringRedisTemplate(connectionFactory).execute((RedisCallback<Void>) connection -> {
                 try {
-                    connection.streamCommands().xGroupCreate("notifications".getBytes(), "notifications-group", ReadOffset.from("0-0"), true);
+                    connection.streamCommands().xGroupCreate("notifications".getBytes(), "notifications-group", ReadOffset.latest(), true);
                     log.info("Created notifications stream group");
                 } catch (Exception e) {
                     String msg = e.getMessage();
