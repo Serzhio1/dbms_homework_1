@@ -40,8 +40,8 @@ Backend-платформа **«GameHub»**: REST API для управления
 - [x] `.gitignore` есть; git-репозиторий инициализирован.
 - [x] Структура пакетов `config/controller/service/model/dto` создана.
 - [x] Фаза 0 (подготовка) + Фаза 1 (инфраструктура Docker: master/replica/sentinel/insight) + Фаза 2 (подключение приложения через Sentinel, Lua-скрипт, Stream-группа, пинг) — выполнены и протестированы (включая failover через `SENTINEL failover`, автопереподключение через Lettuce watchdog, транзиентные `NOREPLICAS` ошибки при переключении).
-- [x] Фаза 3 (профиль игрока Hash + Cache-Aside), Фаза 4 (счётчик входов Lua), Фаза 5 (лидерборд Sorted Set), Фаза 6 (достижения Set) — выполнены и протестированы end-to-end.
-- [ ] Фазы 7–10 (streams-продюсер, pipeline, README, тесты, видео) — ещё не сделаны.
+- [x] Фаза 3 (профиль игрока Hash + Cache-Aside), Фаза 4 (счётчик входов Lua), Фаза 5 (лидерборд Sorted Set), Фаза 6 (достижения Set), Фаза 7 (streams: продюсер `XADD`, консьюмер с `XACK`, MINID-trim) — выполнены и протестированы end-to-end.
+- [ ] Фазы 8–10 (pipeline, README, тесты, видео) — ещё не сделаны.
 - Примечание: Spring Boot 4.1 использует Jackson 3 (`tools.jackson.*`), а не Jackson 2; добавлены `spring-boot-starter-validation` и `spring-boot-starter-jackson`.
 
 ---
@@ -117,13 +117,14 @@ Backend-платформа **«GameHub»**: REST API для управления
 - [x] Проверка: пересечение достижений (общие, пустое пересечение), дубликат `SADD` → `added=false`
 
 ## Фаза 7. Очередь уведомлений (Streams) (критерий 5)
-- [ ] `NotificationService`:
-  - [ ] `XADD notifications * player_id type message timestamp` (+ `MAXLEN ~`)
-  - [ ] вызов при `PATCH level` и `POST achievements`
-  - [ ] scheduled `XTRIM notifications MINID <now_ms - 7*86400*1000>` (хранение 7 дней)
-- [ ] `NotificationConsumer`: `XREADGROUP` → вывод в лог → `XACK`
-- [ ] `PATCH /api/players/{id}/level` (`HINCRBY` + `DEL cache` + `XADD`)
-- [ ] Проверка: `XLEN notifications` > 0, есть xack
+- [x] `NotificationService`:
+  - [x] `XADD notifications * player_id type message timestamp` (без `MAXLEN ~`, только MINID-trim)
+  - [x] вызов при `PATCH level` (всегда) и `POST achievements` (только при новом достижении)
+  - [x] scheduled `XTRIM notifications MINID <now_ms - 7*86400*1000>` (хранение 7 дней) — реализовано через `XTrimOptions`/`TrimOptions.minId`
+- [x] `NotificationConsumer`: `XREADGROUP` → вывод в лог → `XACK` (авто-ack включён: `receiveAutoAck(...)`)
+- [x] `PATCH /api/players/{id}/level` (`HINCRBY` + `DEL cache` + `XADD`, delta, 404 если игрока нет)
+- [x] Проверка: `XLEN notifications` > 0, `XPENDING`/`XINFO GROUPS pending` = 0 (сообщения подтверждаются)
+- [x] Побочно исправлен баг идемпотентности группы: `BUSYGROUP` теперь распознаётся по цепочке `cause` (раньше ложно логировалось "Failed to create stream group")
 
 ## Фаза 8. Конвейеризация (Pipeline) (критерий 6)
 - [ ] `BatchService`: `redisTemplate.executePipelined(...)` для пачки `HSET` (10–20 профилей)

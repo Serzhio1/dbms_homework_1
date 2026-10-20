@@ -70,11 +70,10 @@ public class RedisConfig {
                     connection.streamCommands().xGroupCreate("notifications".getBytes(), "notifications-group", ReadOffset.latest(), true);
                     log.info("Created notifications stream group");
                 } catch (Exception e) {
-                    String msg = e.getMessage();
-                    if (msg != null && (msg.contains("BUSYGROUP") || msg.contains("busy group"))) {
+                    if (containsBusyGroup(e)) {
                         log.info("Notifications stream group already exists");
                     } else {
-                        log.warn("Failed to create stream group: {}", msg);
+                        log.warn("Failed to create stream group: {}", e.getMessage());
                     }
                 }
                 return null;
@@ -83,11 +82,23 @@ public class RedisConfig {
             log.warn("Stream group init error: {}", e.getMessage());
         }
 
-        container.receive(Consumer.from("notifications-group", "consumer-1"),
+        container.receiveAutoAck(Consumer.from("notifications-group", "consumer-1"),
                 StreamOffset.create("notifications", ReadOffset.lastConsumed()),
                 consumer);
 
         return container;
+    }
+
+    private static boolean containsBusyGroup(Throwable e) {
+        Throwable current = e;
+        while (current != null) {
+            String msg = current.getMessage();
+            if (msg != null && msg.contains("BUSYGROUP")) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     @Bean

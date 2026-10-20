@@ -16,6 +16,7 @@ public class AchievementService {
     private static final String ACHIEVEMENTS_KEY = "achievements:";
 
     private final StringRedisTemplate redisTemplate;
+    private final NotificationService notificationService;
 
     public boolean addAchievement(String id, String name) {
         if (!Boolean.TRUE.equals(redisTemplate.hasKey(PROFILE_KEY + id))) {
@@ -24,6 +25,10 @@ public class AchievementService {
 
         Long added = redisTemplate.opsForSet().add(ACHIEVEMENTS_KEY + id, name);
         boolean isNew = added != null && added > 0;
+
+        if (isNew) {
+            notificationService.notify(id, "achievement", "Player " + id + " earned achievement '" + name + "'");
+        }
 
         log.info("Add achievement: SADD {} {} -> {}", ACHIEVEMENTS_KEY + id, name, isNew ? "added" : "already present");
         return isNew;

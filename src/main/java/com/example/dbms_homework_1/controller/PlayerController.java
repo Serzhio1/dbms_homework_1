@@ -1,5 +1,6 @@
 package com.example.dbms_homework_1.controller;
 
+import com.example.dbms_homework_1.dto.LevelRequest;
 import com.example.dbms_homework_1.dto.LoginResponse;
 import com.example.dbms_homework_1.dto.PlayerRequest;
 import com.example.dbms_homework_1.model.PlayerProfile;
@@ -9,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -45,6 +47,15 @@ public class PlayerController {
         try {
             long logins = playerService.login(id);
             return ResponseEntity.ok(new LoginResponse(id, logins));
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+        }
+    }
+
+    @PatchMapping("/{id}/level")
+    public ResponseEntity<PlayerProfile> levelUp(@PathVariable String id, @Valid @RequestBody LevelRequest request) {
+        try {
+            return ResponseEntity.ok(playerService.levelUp(id, request.getDelta()));
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
         }

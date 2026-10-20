@@ -29,6 +29,7 @@ public class PlayerService {
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
     private final DefaultRedisScript<Long> incrementLoginsScript;
+    private final NotificationService notificationService;
 
     public PlayerProfile createPlayer(String id, PlayerRequest request) {
         if (Boolean.TRUE.equals(redisTemplate.hasKey(PROFILE_KEY + id))) {
@@ -67,6 +68,24 @@ public class PlayerService {
 
         log.info("Player {} logged in -> {} = {} (EVALSHA, atomic INCR + EXPIRE 86400)", id, LOGINS_KEY + id, logins);
         return logins;
+    }
+
+    public PlayerProfile levelUp(String id, long delta) {
+        if (!Boolean.TRUE.equals(redisTemplate.hasKey(PROFILE_KEY + id))) {
+            throw new IllegalArgumentException("Player " + id + " does not exist");
+        }
+
+        Long newLevel = redisTemplate.opsForHash().increment(PROFILE_KEY + id, "level", delta);
+        long level = newLevel == null ? 0L : newLevel;
+
+        redisTemplate.delete(CACHE_KEY + id);
+
+        notificationService.notify(id, "level_up", "Player " + id + " reached level " + level);
+
+        log.info("Level up: HINCRBY {} level {} -> {} + DEL {} + XADD",
+                PROFILE_KEY + id, delta, level, CACHE_KEY + id);
+
+        return getPlayer(id).orElseThrow(() -> new IllegalArgumentException("Player " + id + " does not exist"));
     }
 
     public Optional<PlayerProfile> getPlayer(String id) {
