@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/players")
@@ -27,13 +26,9 @@ public class AchievementController {
     @PostMapping("/{id}/achievements")
     public ResponseEntity<AchievementResponse> addAchievement(@PathVariable String id,
                                                               @Valid @RequestBody AchievementRequest request) {
-        try {
-            boolean added = achievementService.addAchievement(id, request.getName());
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(new AchievementResponse(id, request.getName(), added));
-        } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
-        }
+        boolean added = achievementService.addAchievement(id, request.getName());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new AchievementResponse(id, request.getName(), added));
     }
 
     @GetMapping("/{id}/achievements/{name}")

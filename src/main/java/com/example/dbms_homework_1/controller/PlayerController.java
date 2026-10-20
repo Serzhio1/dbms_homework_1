@@ -37,12 +37,9 @@ public class PlayerController {
 
     @PostMapping("/{id}")
     public ResponseEntity<PlayerProfile> createPlayer(@PathVariable String id, @Valid @RequestBody PlayerRequest request) {
-        try {
-            PlayerProfile profile = playerService.createPlayer(id, request);
-            return ResponseEntity.status(HttpStatus.CREATED).body(profile);
-        } catch (IllegalStateException e) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
-        }
+        boolean existed = playerService.exists(id);
+        PlayerProfile profile = playerService.createOrUpdatePlayer(id, request);
+        return ResponseEntity.status(existed ? HttpStatus.OK : HttpStatus.CREATED).body(profile);
     }
 
     @GetMapping("/{id}")
@@ -54,20 +51,11 @@ public class PlayerController {
 
     @PostMapping("/{id}/login")
     public ResponseEntity<LoginResponse> login(@PathVariable String id) {
-        try {
-            long logins = playerService.login(id);
-            return ResponseEntity.ok(new LoginResponse(id, logins));
-        } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
-        }
+        return ResponseEntity.ok(new LoginResponse(id, playerService.login(id)));
     }
 
     @PatchMapping("/{id}/level")
     public ResponseEntity<PlayerProfile> levelUp(@PathVariable String id, @Valid @RequestBody LevelRequest request) {
-        try {
-            return ResponseEntity.ok(playerService.levelUp(id, request.getDelta()));
-        } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
-        }
+        return ResponseEntity.ok(playerService.levelUp(id, request.getDelta()));
     }
 }

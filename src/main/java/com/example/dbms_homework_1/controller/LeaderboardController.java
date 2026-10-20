@@ -29,11 +29,7 @@ public class LeaderboardController {
 
     @PostMapping("/score")
     public ResponseEntity<ScoreResponse> addScore(@Valid @RequestBody ScoreRequest request) {
-        try {
-            return ResponseEntity.ok(leaderboardService.addScore(request));
-        } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
-        }
+        return ResponseEntity.ok(leaderboardService.addScore(request));
     }
 
     @GetMapping("/top")
