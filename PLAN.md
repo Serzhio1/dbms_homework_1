@@ -95,7 +95,7 @@ Backend-платформа **«GameHub»**: REST API для управления
 ## Фаза 3. Профили игроков (Hash + Cache-Aside) (критерии 3, 4)
 - [x] `model/PlayerProfile.java`, `dto/PlayerRequest.java` (Bean Validation: `@NotBlank`, `@Min`)
 - [x] `PlayerService`:
-  - [x] `POST`: `HSET player:{id} name level region created_at` + `DEL cache:player:{id}` (+ проверка дубликата → 409)
+  - [x] `POST`: upsert по ТЗ — `HSET player:{id} name level region created_at` + `DEL cache:player:{id}` (201 при создании, 200 при обновлении; `created_at` сохраняется)
   - [x] `GET`: `GET cache:player:{id}` → hit вернуть JSON; miss: `HGETALL` + `SET cache:player:{id} {json} EX 60` (+ самовосстановление при повреждённом кэше)
 - [x] `PlayerController`: `POST /api/players/{id}`, `GET /api/players/{id}`
 - [x] Проверка: `TTL cache:player:{id}` > 0 (60), второй GET — hit, отсутствующий игрок → 404
@@ -150,7 +150,7 @@ Backend-платформа **«GameHub»**: REST API для управления
 ## Контракт эндпоинтов (из ТЗ)
 | Метод | Путь | Redis |
 |-------|------|-------|
-| POST | `/api/players/{id}` | `HSET player:{id}` + `DEL cache` |
+| POST | `/api/players/{id}` | upsert по ТЗ: `HSET player:{id}` + `DEL cache` (201 создание / 200 обновление) |
 | GET | `/api/players/{id}` | `GET cache` → miss `HGETALL` + `SET EX 60` |
 | PATCH | `/api/players/{id}/level` | `HINCRBY` + `DEL cache` + `XADD` |
 | POST | `/api/players/{id}/login` | Lua `INCR` + `EXPIRE 86400` |

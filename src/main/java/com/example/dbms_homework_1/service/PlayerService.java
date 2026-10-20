@@ -31,17 +31,22 @@ public class PlayerService {
     private final DefaultRedisScript<Long> incrementLoginsScript;
     private final NotificationService notificationService;
 
-    public PlayerProfile createPlayer(String id, PlayerRequest request) {
-        if (Boolean.TRUE.equals(redisTemplate.hasKey(PROFILE_KEY + id))) {
-            throw new IllegalStateException("Player " + id + " already exists");
-        }
+    public PlayerProfile createOrUpdatePlayer(String id, PlayerRequest request) {
+        boolean exists = Boolean.TRUE.equals(redisTemplate.hasKey(PROFILE_KEY + id));
+
+        Object existingCreatedAt = exists
+                ? redisTemplate.opsForHash().get(PROFILE_KEY + id, "created_at")
+                : null;
+        String createdAt = existingCreatedAt != null
+                ? existingCreatedAt.toString()
+                : Instant.now().toString();
 
         PlayerProfile profile = PlayerProfile.builder()
                 .id(id)
                 .name(request.getName())
                 .level(request.getLevel())
                 .region(request.getRegion())
-                .createdAt(Instant.now().toString())
+                .createdAt(createdAt)
                 .build();
 
         redisTemplate.opsForHash().putAll(PROFILE_KEY + id, Map.of(
@@ -54,8 +59,13 @@ public class PlayerService {
 
         redisTemplate.delete(CACHE_KEY + id);
 
-        log.info("Created player {}: HSET {} + DEL {}", id, PROFILE_KEY + id, CACHE_KEY + id);
+        log.info("{} player {}: HSET {} + DEL {}", exists ? "Updated" : "Created", id,
+                PROFILE_KEY + id, CACHE_KEY + id);
         return profile;
+    }
+
+    public boolean exists(String id) {
+        return Boolean.TRUE.equals(redisTemplate.hasKey(PROFILE_KEY + id));
     }
 
     public long login(String id) {
