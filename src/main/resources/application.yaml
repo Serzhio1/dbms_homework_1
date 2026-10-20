@@ -6,9 +6,9 @@ spring:
       sentinel:
         master: mymaster
         nodes:
-          - sentinel-1:26379
-          - sentinel-2:26380
-          - sentinel-3:26381
+          - localhost:26379
+          - localhost:26380
+          - localhost:26381
       timeout: 2000ms
       lettuce:
         pool:

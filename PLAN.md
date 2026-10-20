@@ -105,9 +105,9 @@ Backend-платформа **«GameHub»**: REST API для управления
 - [x] Проверка: `GET logins:{id}` растёт (1,2,3,…), `TTL` ≈ 86400 и обновляется при каждом входе
 
 ## Фаза 5. Лидерборд (Sorted Set) (критерий 3)
-- [x] `LeaderboardService`: `ZINCRBY tournament:main`, `ZREVRANGE 0 9 WITHSCORES`, `ZREVRANK`
+- [x] `LeaderboardService`: `ZINCRBY tournament:main`, `ZREVRANGE 0 9 WITHSCORES`, `ZRANK` (по ТЗ: место игрока — именно `ZRANK`, 0 = низший счёт)
 - [x] `POST /api/leaderboard/score`, `GET /api/leaderboard/top?limit=10`, `GET /api/leaderboard/rank/{playerId}`
-- [x] Проверка: топ-10 по убыванию, место игрока (0-based), отсутствующий → 404, несуществующий игрок при начислении → 404
+- [x] Проверка: топ-10 по убыванию, место игрока через `ZRANK` (0 = игрок с наименьшим счётом), отсутствующий → 404, несуществующий игрок при начислении → 404
 
 ## Фаза 6. Достижения (Set) (критерий 3)
 - [x] `AchievementService`: `SADD`, `SISMEMBER`, `SINTER`

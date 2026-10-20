@@ -56,8 +56,8 @@ public class LeaderboardService {
     }
 
     public Optional<Long> getRank(String playerId) {
-        Long rank = redisTemplate.opsForZSet().reverseRank(LEADERBOARD_KEY, playerId);
-        log.info("Rank lookup: ZREVRANK {} {} -> {}", LEADERBOARD_KEY, playerId, rank);
+        Long rank = redisTemplate.opsForZSet().rank(LEADERBOARD_KEY, playerId);
+        log.info("Rank lookup: ZRANK {} {} -> {}", LEADERBOARD_KEY, playerId, rank);
         return Optional.ofNullable(rank);
     }
 }
