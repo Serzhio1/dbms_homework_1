@@ -1,9 +1,12 @@
 package com.example.dbms_homework_1.controller;
 
+import com.example.dbms_homework_1.dto.BatchCreateRequest;
+import com.example.dbms_homework_1.dto.BatchResponse;
 import com.example.dbms_homework_1.dto.LevelRequest;
 import com.example.dbms_homework_1.dto.LoginResponse;
 import com.example.dbms_homework_1.dto.PlayerRequest;
 import com.example.dbms_homework_1.model.PlayerProfile;
+import com.example.dbms_homework_1.service.BatchService;
 import com.example.dbms_homework_1.service.PlayerService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +27,13 @@ import org.springframework.web.server.ResponseStatusException;
 public class PlayerController {
 
     private final PlayerService playerService;
+    private final BatchService batchService;
+
+    @PostMapping("/batch")
+    public ResponseEntity<BatchResponse> createPlayersBatch(@Valid @RequestBody BatchCreateRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(batchService.createPlayers(request.getPlayers()));
+    }
 
     @PostMapping("/{id}")
     public ResponseEntity<PlayerProfile> createPlayer(@PathVariable String id, @Valid @RequestBody PlayerRequest request) {

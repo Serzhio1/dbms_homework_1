@@ -41,7 +41,8 @@ Backend-платформа **«GameHub»**: REST API для управления
 - [x] Структура пакетов `config/controller/service/model/dto` создана.
 - [x] Фаза 0 (подготовка) + Фаза 1 (инфраструктура Docker: master/replica/sentinel/insight) + Фаза 2 (подключение приложения через Sentinel, Lua-скрипт, Stream-группа, пинг) — выполнены и протестированы (включая failover через `SENTINEL failover`, автопереподключение через Lettuce watchdog, транзиентные `NOREPLICAS` ошибки при переключении).
 - [x] Фаза 3 (профиль игрока Hash + Cache-Aside), Фаза 4 (счётчик входов Lua), Фаза 5 (лидерборд Sorted Set), Фаза 6 (достижения Set), Фаза 7 (streams: продюсер `XADD`, консьюмер с `XACK`, MINID-trim) — выполнены и протестированы end-to-end.
-- [ ] Фазы 8–10 (pipeline, README, тесты, видео) — ещё не сделаны.
+- [x] Фаза 8 (pipeline: `BatchService` + `POST /api/players/batch` с замером времени, валидация 10–20, пропуск дубликатов) — выполнена и протестирована.
+- [ ] Фазы 9–10 (README, тесты, видео) — ещё не сделаны.
 - Примечание: Spring Boot 4.1 использует Jackson 3 (`tools.jackson.*`), а не Jackson 2; добавлены `spring-boot-starter-validation` и `spring-boot-starter-jackson`.
 
 ---
@@ -127,9 +128,10 @@ Backend-платформа **«GameHub»**: REST API для управления
 - [x] Побочно исправлен баг идемпотентности группы: `BUSYGROUP` теперь распознаётся по цепочке `cause` (раньше ложно логировалось "Failed to create stream group")
 
 ## Фаза 8. Конвейеризация (Pipeline) (критерий 6)
-- [ ] `BatchService`: `redisTemplate.executePipelined(...)` для пачки `HSET` (10–20 профилей)
-- [ ] `POST /api/players/batch` + замер времени
-- [ ] Проверка: код использует pipeline, время замеряется
+- [x] `BatchService`: `redisTemplate.executePipelined(...)` для пачки `HSET` (10–20 профилей)
+- [x] `POST /api/players/batch` + замер времени (`elapsedMs`, `System.nanoTime()`)
+- [x] Проверка: код использует pipeline, время замеряется (15 профилей → 1 round-trip, ~11ms)
+- [x] Валидация: `@Size(min=10, max=20)` → иначе 400; дубликаты пропускаются (`skipped`)
 
 ## Фаза 9. Документация и качество (критерий 8)
 - [ ] `README.md`: архитектура, схема данных, запуск, описание API, сценарии демо
