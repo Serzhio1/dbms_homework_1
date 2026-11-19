@@ -171,3 +171,9 @@ docker exec redis-master redis-cli XLEN notifications
 docker exec redis-master redis-cli XPENDING notifications notifications-group
 docker compose logs --tail=100 app | grep "Notification received"
 ```
+
+---
+
+## 7. Видео-демонстрация
+
+Видео с демонстрацией работы приложения: <https://disk.yandex.ru/i/107PgGsHouT4_g>
